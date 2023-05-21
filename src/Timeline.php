@@ -59,6 +59,8 @@ class Timeline extends AbstractController
         $endpoint = parent::constructEndpoint();
         if (!is_null($this->next_page_token)) {
             $this->query_string['pagination_token'] = $this->next_page_token;
+        }
+        if($this -> query_string) {
             $endpoint .= '?' . http_build_query($this->query_string);
         }
         return $endpoint;

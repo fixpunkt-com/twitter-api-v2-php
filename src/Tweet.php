@@ -48,4 +48,18 @@ class Tweet extends AbstractController
         $this->setHttpRequestMethod('DELETE');
         return $this;
     }
+
+    /**
+     * Retrieve Endpoint value and rebuilt it with the expected parameters
+     * @return string the URL for the request.
+     * @throws \Exception
+     */
+    protected function constructEndpoint(): string
+    {
+        $endpoint = parent::constructEndpoint();
+        if ($this->query_string) {
+            $endpoint .= '&' . http_build_query($this->query_string);
+        }
+        return $endpoint;
+    }
 }

@@ -246,4 +246,9 @@ abstract class AbstractController
     {
         return $this->http_request_method;
     }
+
+    public function addQueryString(string $key, string $value) : AbstractController {
+        $this -> query_string[$key] = $value;
+        return $this;
+    }
 }

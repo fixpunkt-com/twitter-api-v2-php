@@ -190,7 +190,8 @@ class TweetLookup extends AbstractController
         if (empty($this->filteredKeywords) &&
             empty($this->filteredUsernamesFrom) &&
             empty($this->filteredUsernamesTo) &&
-            empty($this->filteredConversationId)
+            empty($this->filteredConversationId) &&
+            !key_exists("query", $this -> query_string)
         ) {
             $error = new \stdClass();
             $error->message = 'cURL error';
@@ -198,66 +199,66 @@ class TweetLookup extends AbstractController
             throw new \Exception(json_encode($error, JSON_THROW_ON_ERROR), 403);
         }
 
-        $endpoint .= '?query=';
+        if(!key_exists("query", $this -> query_string)) {
 
-        if (!empty($this->filteredKeywords)) {
-            $loop = 0;
-            $endpoint .= '(';
-            foreach ($this->filteredKeywords as $keyword) {
-                ++$loop;
-                $qtyKeywords = count($this->filteredKeywords);
+            $endpoint .= '?query=';
 
-                $endpoint .= '("' . $keyword . '"%20OR%20%23' . $keyword . ')';
-                if ($qtyKeywords > 1 && $loop < $qtyKeywords) {
-                    $endpoint .= '%20' . $this->operatorOnFilteredKeywords . '%20';
+            if (!empty($this->filteredKeywords)) {
+                $loop = 0;
+                $endpoint .= '(';
+                foreach ($this->filteredKeywords as $keyword) {
+                    ++$loop;
+                    $qtyKeywords = count($this->filteredKeywords);
+
+                    $endpoint .= '("' . $keyword . '"%20OR%20%23' . $keyword . ')';
+                    if ($qtyKeywords > 1 && $loop < $qtyKeywords) {
+                        $endpoint .= '%20' . $this->operatorOnFilteredKeywords . '%20';
+                    }
                 }
+                $endpoint .= ')';
             }
-            $endpoint .= ')';
+
+            if (!empty($this->filteredUsernamesFrom)) {
+                $endpoint .= '%20(from:' .
+                    implode('%20' . $this->operatorOnFilteredUsernamesFrom . '%20from:', $this->filteredUsernamesFrom) . ')';
+            }
+
+            if (!empty($this->filteredUsernamesTo)) {
+                $endpoint .= '%20(to:' .
+                    implode('%20' . $this->operatorOnFilteredUsernamesTo . '%20to:', $this->filteredUsernamesTo) . ')';
+            }
+
+            if (!empty($this->filteredConversationId)) {
+                $endpoint .= '%20conversation_id:' . $this->filteredConversationId;
+            }
+
+            if (!empty($this->filteredLocales)) {
+                $endpoint .= '%20(lang:' . implode('%20OR%20lang:', $this->filteredLocales) . ')';
+            }
+
+            if ($this->hasMedias) {
+                $endpoint .= '%20has:media';
+            }
+
+            if (!empty($this->maxResults)) {
+                $endpoint .= '&max_results=' . $this->maxResults;
+            }
         }
 
-        if (!empty($this->filteredUsernamesFrom)) {
-            $endpoint .= '%20(from:' .
-                implode('%20' . $this->operatorOnFilteredUsernamesFrom . '%20from:', $this->filteredUsernamesFrom) . ')';
+
+        if (! is_null($this->next_page_token)) {
+            $this ->  addQueryString('&pagination_token', $this->next_page_token);
         }
-
-        if (!empty($this->filteredUsernamesTo)) {
-            $endpoint .= '%20(to:' .
-                implode('%20' . $this->operatorOnFilteredUsernamesTo . '%20to:', $this->filteredUsernamesTo) . ')';
+        if ($this->query_string) {
+            $endpoint .= '?' . http_build_query($this->query_string);
         }
-
-        if (!empty($this->filteredConversationId)) {
-            $endpoint .= '%20conversation_id:' . $this->filteredConversationId;
-        }
-
-        if (!empty($this->filteredLocales)) {
-            $endpoint .= '%20(lang:' . implode('%20OR%20lang:', $this->filteredLocales) . ')';
-        }
-
-        if ($this->hasMedias) {
-            $endpoint .= '%20has:media';
-        }
-
-        if (!empty($this->maxResults)) {
-            $endpoint .= '&max_results=' . $this->maxResults;
-        }
-
-        if ($this->addMetrics) {
-            $endpoint .= '&tweet.fields=public_metrics';
-        }
-
-        $endpoint .= '&expansions=attachments.media_keys';
-
-        if ($this->addUserDetails) {
-            $endpoint .= ',author_id&user.fields=description';
-        }
-
-        $endpoint .= '&media.fields=duration_ms,height,media_key,preview_image_url,public_metrics,type,url,width,alt_text';
 
         // Pagination
-        if (! is_null($this->next_page_token)) {
-            $endpoint .= '&pagination_token=' . $this->next_page_token;
-        }
 
         return $endpoint;
+    }
+
+    public function filterOnHashtag(string $hashtag) : AbstractController {
+        return $this -> addQueryString("query", "#".$hashtag);
     }
 }
